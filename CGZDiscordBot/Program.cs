@@ -1,5 +1,5 @@
-﻿using Discord;
-using Discord.WebSocket;
+﻿using DSharpPlus;
+using DSharpPlus.CommandsNext;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,20 +10,25 @@ namespace CGZDiscordBot
 	{
 		static void Main(string[] args)
 		{
-			var client = new DiscordSocketClient();
+			var client = new DiscordClient(new DiscordConfiguration { TokenType = TokenType.Bot, Token = @"NzgyMzQ0MDA1OTUzMzg4NTg0.X8K0og.xnmh5esDi21KrQRPiN1IQkYc2Wk" });
 
-			client.Log += (m) => { Console.WriteLine(m.Message); return Task.CompletedTask; };
-			client.MessageReceived += Client_MessageReceived;
+			CommandsNextConfiguration config = new CommandsNextConfiguration
+			{
+				StringPrefix = "/",
+				EnableMentionPrefix = false,
+				EnableDms = false,
+				EnableDefaultHelp = true,
+			};
 
-			client.LoginAsync(TokenType.Bot, @"NzgyMzQ0MDA1OTUzMzg4NTg0.X8K0og.xnmh5esDi21KrQRPiN1IQkYc2Wk").ContinueWith((s) => client.StartAsync());
+
+			client.UseCommandsNext(config);
+			client.GetCommandsNext().RegisterCommands<CommandHandler>();
+
+			ServerDefine.Init(client);
+
+			client.ConnectAsync();
+
 			Thread.Sleep(-1);
-		}
-
-		private static Task Client_MessageReceived(SocketMessage arg)
-		{
-
-
-			return Task.CompletedTask;
 		}
 	}
 }
