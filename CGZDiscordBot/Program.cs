@@ -14,7 +14,7 @@ namespace CGZDiscordBot
 
 			CommandsNextConfiguration config = new CommandsNextConfiguration
 			{
-				StringPrefix = "/",
+				StringPrefixes = new string[] { "/" },
 				EnableMentionPrefix = false,
 				EnableDms = false,
 				EnableDefaultHelp = true,
@@ -24,9 +24,11 @@ namespace CGZDiscordBot
 			client.UseCommandsNext(config);
 			client.GetCommandsNext().RegisterCommands<CommandHandler>();
 
-			ServerDefine.Init(client);
 
-			client.ConnectAsync();
+
+			client.ConnectAsync().Wait();
+
+			ServerDefine.Init(client);
 
 			Thread.Sleep(-1);
 		}

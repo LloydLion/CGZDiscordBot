@@ -12,7 +12,7 @@ namespace CGZDiscordBot
 	{
 		public static void Init(DiscordClient client)
 		{
-			CreateChannelChannel = client.Guilds.Values.ElementAt(0).GetChannel(780833811566166037);
+			//CreateChannelChannel = client.Guilds.Values.ElementAt(0).GetChannel(780833811566166037);
 		}
 
 

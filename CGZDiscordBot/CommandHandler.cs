@@ -1,5 +1,7 @@
-﻿using DSharpPlus.CommandsNext;
+﻿using DSharpPlus;
+using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace CGZDiscordBot
 {
-	class CommandHandler
+	class CommandHandler : BaseCommandModule
 	{
 		[Command("hello")]
 		public async Task Hello(CommandContext ctx)
@@ -19,9 +21,28 @@ namespace CGZDiscordBot
 		}
 
 		[Command("create")]
-		public async Task CreateChanel(CommandContext ctx)
+		public async Task CreateChanel(CommandContext ctx, string typeStr, string name)
 		{
+			//if(ctx.Channel != ServerDefine.CreateChannelChannel) return;
 
+			var type = (ChannelType)Enum.Parse(typeof(ChannelType), typeStr);
+
+			var overwrites = new DiscordOverwriteBuilder[] { new DiscordOverwriteBuilder() { Allowed = Permissions.All ^ Permissions.Administrator }.For(ctx.Member) };
+
+			switch (type)
+			{
+				case ChannelType.Text:
+					await ctx.Guild.CreateChannelAsync(name, ChannelType.Text, overwrites: overwrites).ThrowTaskException();
+					break;
+
+				case ChannelType.Voice:
+					await ctx.Guild.CreateChannelAsync(name, ChannelType.Voice, overwrites: overwrites).ThrowTaskException();
+					break;
+
+				default: return;
+			}
+
+			await ctx.Channel.SendMessageAsync("Channel created").ThrowTaskException();
 		}
 
 		[Command("msg-info")]
