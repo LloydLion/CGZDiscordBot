@@ -1,6 +1,7 @@
 ﻿using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
+using DSharpPlus.EventArgs;
 using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
 using StandardLibrary.Data;
@@ -19,7 +20,7 @@ namespace CGZDiscordBot
 		static void Main(string[] args)
 		{
 			DataSaver.SetApplicationName("CGZDiscordBot");
-			if(SettingsSaver.HasKey("init")) BotInitSettings.ServersData.AddRange(SettingsSaver.GetSavedObject<Dictionary<ulong, BotInitSettings>>("init"));
+			if (SettingsSaver.HasKey("init")) BotInitSettings.ServersData.AddRange(SettingsSaver.GetSavedObject<Dictionary<ulong, BotInitSettings>>("init"));
 
 			var client = new DiscordClient(new DiscordConfiguration { TokenType = TokenType.Bot, Token = @"NzgyMzQ0MDA1OTUzMzg4NTg0.X8K0og.xnmh5esDi21KrQRPiN1IQkYc2Wk" });
 
@@ -33,12 +34,11 @@ namespace CGZDiscordBot
 
 			InteractivityConfiguration interactConfig = new InteractivityConfiguration
 			{
-				
+
 			};
 
 			client.UseCommandsNext(commConfig);
 			client.UseInteractivity(interactConfig);
-
 
 			client.GetCommandsNext().RegisterCommands<CommandHandler>();
 

@@ -18,6 +18,12 @@ namespace CGZDiscordBot
 			else throw task.Exception;
 		}
 
+		public static async Task ThrowTaskException(this Task task)
+		{
+			await task;
+			if(task.Exception != null) throw task.Exception;
+		}
+
 		public static void AddRange<TKey, TValue>(this Dictionary<TKey, TValue> obj, Dictionary<TKey, TValue> toAdd)
 		{
 			toAdd.InvokeForAll(s => obj.Add(s.Key, s.Value));

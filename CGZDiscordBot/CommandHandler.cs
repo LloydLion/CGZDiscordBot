@@ -4,6 +4,7 @@ using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using DSharpPlus.Interactivity.Extensions;
 using StandardLibrary.Data;
+using StandardLibrary.Other;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,7 +26,7 @@ namespace CGZDiscordBot
 		[Command("create")]
 		public async Task CreateChanel(CommandContext ctx, string name)
 		{
-			if(ctx.Channel != BotInitSettings.ServersData[ctx.Guild.Id].VoiceChannelCreationChannel) return;
+			if (ctx.Channel != BotInitSettings.ServersData[ctx.Guild.Id].VoiceChannelCreationChannel) return;
 
 			var overwrites = new DiscordOverwriteBuilder[] { new DiscordOverwriteBuilder() { Allowed = Permissions.All }.For(ctx.Member) };
 			await ctx.Guild.CreateChannelAsync(name, ChannelType.Voice, overwrites: overwrites, parent: BotInitSettings.ServersData[ctx.Guild.Id].VoiceChannelCategory).ThrowTaskException();
@@ -46,6 +47,15 @@ namespace CGZDiscordBot
 			await ctx.Channel.SendMessageAsync(builder.ToString());
 		}
 
+		[Command("join")]
+		public async Task HelloNewMember(CommandContext ctx)
+		{
+			await ctx.Member.GrantRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].DefaultMemberRole).ThrowTaskException();
+			await ctx.Message.DeleteAsync().ThrowTaskException();
+			(await ctx.Channel.GetMessagesAsync().ThrowTaskException()).Where(s => s.Author.Username != "LloydLion").InvokeForAll(s => s.DeleteAsync().Wait());
+		}
+
+		[Hidden]
 		[Command("st-init-dialog")]
 		public async Task InitBot(CommandContext ctx)
 		{
@@ -78,11 +88,21 @@ namespace CGZDiscordBot
 
 				//step 2
 				await direct.SendMessageAsync("Enter \"/bot-init#select-caterogy\" in any channel in category for voice channel creation");
-				step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content == "/bot-init#select-caterogy").ThrowTaskException()).Result;
+				step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content == "/bot-init#select-category").ThrowTaskException()).Result;
 
-				await step.Channel.SendMessageAsync("Channel selected");
+				await step.Channel.SendMessageAsync("Category selected");
 
 				BotInitSettings.ServersData[ctx.Guild.Id].VoiceChannelCategory = step.Channel.Parent;
+
+				//step 3
+				await direct.SendMessageAsync("Enter \"/bot-init#select-role @ROLEMENTION\" in any channel in category for voice channel creation");
+				step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content.StartsWith("/bot-init#select-role <@&")).ThrowTaskException()).Result;
+
+				var role = ctx.Guild.GetRole(ulong.Parse(step.Content["/bot-init#select-role <@&".Length..^1]));
+
+				await step.Channel.SendMessageAsync("Role selected");
+
+				BotInitSettings.ServersData[ctx.Guild.Id].DefaultMemberRole = role;
 
 
 				await direct.SendMessageAsync("Setup end");

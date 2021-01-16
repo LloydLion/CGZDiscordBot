@@ -11,8 +11,11 @@ namespace CGZDiscordBot
 	{
 		public static Dictionary<ulong, BotInitSettings> ServersData { get; } = new Dictionary<ulong, BotInitSettings>();
 
+
 		public DiscordChannel VoiceChannelCreationChannel { get; set; }
 
 		public DiscordChannel VoiceChannelCategory { get; set; }
+
+		public DiscordRole DefaultMemberRole { get; set; }
 	}
 }
