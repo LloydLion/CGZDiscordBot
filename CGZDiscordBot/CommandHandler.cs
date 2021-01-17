@@ -35,6 +35,39 @@ namespace CGZDiscordBot
 			await ctx.Channel.SendMessageAsync("Channel created").ThrowTaskException();
 		}
 
+		[Command("mute")]
+		public async Task MuteMember(CommandContext ctx, DiscordMember member, string reason, string time)
+		{
+			time = time == "-1" ? null : time;
+
+			await member.RevokeRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetDefaultMemberRole(ctx.Guild)).ThrowTaskException();
+			await member.GrantRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetMutedMemberRole(ctx.Guild)).ThrowTaskException();
+
+			await ctx.Message.DeleteAsync();
+
+			await ctx.Channel.SendMessageAsync(member.Mention + " заглущён на " + time?.ToString() ?? "неограниченное время" + " по причине " + reason ?? "*НЕЗАДАНО*");
+
+			if(time == null) return;
+			else
+			{
+				var span = TimeSpan.Parse(time);
+				await Task.Delay((int)span.TotalMilliseconds);
+
+				await UnmuteMember(ctx, member).ThrowTaskException();
+			}
+		}
+
+		[Command("unmute")]
+		public async Task UnmuteMember(CommandContext ctx, DiscordMember member)
+		{
+			await member.GrantRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetDefaultMemberRole(ctx.Guild)).ThrowTaskException();
+			await member.RevokeRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetMutedMemberRole(ctx.Guild)).ThrowTaskException();
+
+			await ctx.Channel.SendMessageAsync(member.Mention + " теперь может говорить(и писать тоже)!");
+
+			await ctx.Message.DeleteAsync();
+		}
+
 		[Command("msg-info")]
 		public async Task MessageInfo(CommandContext ctx, params string[] msg)
 		{
@@ -175,6 +208,16 @@ namespace CGZDiscordBot
 				await step.Channel.SendMessageAsync("Role selected");
 
 				BotInitSettings.ServersData[ctx.Guild.Id].StreamSubscriberRole = role.Id;
+
+				//step 5
+				await direct.SendMessageAsync("Enter \"/bot-init#select-role @ROLEMENTION\" for muted member");
+				step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content.StartsWith("/bot-init#select-role <@&")).ThrowTaskException()).Result;
+
+				role = ctx.Guild.GetRole(ulong.Parse(step.Content["/bot-init#select-role <@&".Length..^1]));
+
+				await step.Channel.SendMessageAsync("Role selected");
+
+				BotInitSettings.ServersData[ctx.Guild.Id].MutedMemberRole = role.Id;
 
 
 				await direct.SendMessageAsync("Setup end");

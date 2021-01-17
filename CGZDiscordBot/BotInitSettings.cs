@@ -24,6 +24,8 @@ namespace CGZDiscordBot
 
 		public ulong Administrator { get; set; }
 
+		public ulong MutedMemberRole { get; set; }
+
 
 		public DiscordChannel GetVoiceChannelCreationChannel(DiscordGuild guild) => guild.GetChannel(VoiceChannelCreationChannel);
 
@@ -36,5 +38,7 @@ namespace CGZDiscordBot
 		public DiscordRole GetStreamSubscriberRole(DiscordGuild guild) => guild.GetRole(StreamSubscriberRole);
 
 		public DiscordMember GetAdministrator(DiscordGuild guild) => guild.GetMemberAsync(Administrator).Result;
+
+		public DiscordRole GetMutedMemberRole(DiscordGuild guild) => guild.GetRole(MutedMemberRole);
 	}
 }
