@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CGZDiscordBot
@@ -29,15 +30,23 @@ namespace CGZDiscordBot
 			if (ctx.Channel.Id != BotInitSettings.ServersData[ctx.Guild.Id].VoiceChannelCreationChannel) return;
 
 			var overwrites = new DiscordOverwriteBuilder[] { new DiscordOverwriteBuilder() { Allowed = Permissions.All }.For(ctx.Member) };
-			await ctx.Guild.CreateChannelAsync(name, ChannelType.Voice, overwrites: overwrites,
+			var channel = await ctx.Guild.CreateChannelAsync(name, ChannelType.Voice, overwrites: overwrites,
 				parent: BotInitSettings.ServersData[ctx.Guild.Id].GetVoiceChannelCategory(ctx.Guild)).ThrowTaskException();
 
 			await ctx.Channel.SendMessageAsync("Channel created").ThrowTaskException();
+
+			await Task.Delay(10000);
+
+			while(channel.Users.Any()) Thread.Sleep(1);
+
+			await channel.DeleteAsync();
 		}
 
 		[Command("mute")]
 		public async Task MuteMember(CommandContext ctx, DiscordMember member, string reason, string time)
 		{
+			if(ctx.Member.PermissionsIn(ctx.Channel).HasPermission(Permissions.KickMembers) == false) return;
+
 			time = time == "-1" ? null : time;
 
 			await member.RevokeRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetDefaultMemberRole(ctx.Guild)).ThrowTaskException();
@@ -45,7 +54,7 @@ namespace CGZDiscordBot
 
 			await ctx.Message.DeleteAsync();
 
-			await ctx.Channel.SendMessageAsync(member.Mention + " заглущён на " + time?.ToString() ?? "неограниченное время" + " по причине " + reason ?? "*НЕЗАДАНО*");
+			await ctx.Channel.SendMessageAsync(member.Mention + " заглушон на " + (time?.ToString() ?? "неограниченное время") + " по причине " + (reason ?? "*НЕЗАДАНО*"));
 
 			if(time == null) return;
 			else
@@ -60,6 +69,8 @@ namespace CGZDiscordBot
 		[Command("unmute")]
 		public async Task UnmuteMember(CommandContext ctx, DiscordMember member)
 		{
+			if(ctx.Member.PermissionsIn(ctx.Channel).HasPermission(Permissions.KickMembers) == false) return;
+
 			await member.GrantRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetDefaultMemberRole(ctx.Guild)).ThrowTaskException();
 			await member.RevokeRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetMutedMemberRole(ctx.Guild)).ThrowTaskException();
 
