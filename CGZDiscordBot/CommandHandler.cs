@@ -26,10 +26,12 @@ namespace CGZDiscordBot
 		[Command("create")]
 		public async Task CreateChanel(CommandContext ctx, string name)
 		{
-			if (ctx.Channel != BotInitSettings.ServersData[ctx.Guild.Id].VoiceChannelCreationChannel) return;
+			if (ctx.Channel.Id != BotInitSettings.ServersData[ctx.Guild.Id].VoiceChannelCreationChannel) return;
 
 			var overwrites = new DiscordOverwriteBuilder[] { new DiscordOverwriteBuilder() { Allowed = Permissions.All }.For(ctx.Member) };
-			await ctx.Guild.CreateChannelAsync(name, ChannelType.Voice, overwrites: overwrites, parent: BotInitSettings.ServersData[ctx.Guild.Id].VoiceChannelCategory).ThrowTaskException();
+			await ctx.Guild.CreateChannelAsync(name, ChannelType.Voice, overwrites: overwrites,
+				parent: BotInitSettings.ServersData[ctx.Guild.Id].GetVoiceChannelCategory(ctx.Guild)).ThrowTaskException();
+
 			await ctx.Channel.SendMessageAsync("Channel created").ThrowTaskException();
 		}
 
@@ -50,9 +52,58 @@ namespace CGZDiscordBot
 		[Command("join")]
 		public async Task HelloNewMember(CommandContext ctx)
 		{
-			await ctx.Member.GrantRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].DefaultMemberRole).ThrowTaskException();
+			await ctx.Member.GrantRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetDefaultMemberRole(ctx.Guild)).ThrowTaskException();
 			await ctx.Message.DeleteAsync().ThrowTaskException();
-			(await ctx.Channel.GetMessagesAsync().ThrowTaskException()).Where(s => s.Author.Username != "LloydLion").InvokeForAll(s => s.DeleteAsync().Wait());
+			(await ctx.Channel.GetMessagesAsync().ThrowTaskException())
+				.Where(s => s.Author.Id != BotInitSettings.ServersData[ctx.Guild.Id].Administrator).InvokeForAll(s => s.DeleteAsync().Wait());
+		}
+
+		[Command("subscribe-streams")]
+		public async Task SubscribeToStreams(CommandContext ctx)
+		{
+			await ctx.Member.GrantRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetStreamSubscriberRole(ctx.Guild));
+			var msg = await ctx.Channel.SendMessageAsync(ctx.Member.Mention + " подписался на стримы");
+			await ctx.Message.DeleteAsync();
+
+			await Task.Delay(3000);
+
+			await msg.DeleteAsync();
+		}
+
+		[Command("unsubscribe-streams")]
+		public async Task UnsubscribeFromStreams(CommandContext ctx)
+		{
+			await ctx.Member.RevokeRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetStreamSubscriberRole(ctx.Guild));
+			var msg = await ctx.Channel.SendMessageAsync(ctx.Member.Mention + " отподписался от стримов");
+			await ctx.Message.DeleteAsync();
+
+			await Task.Delay(3000);
+
+			await msg.DeleteAsync();
+		}
+
+		[Command("announce")]
+		public async Task Announce(CommandContext ctx, string gameName, string streamName, string link, int? time = null)
+		{
+			if(time == null)
+			{
+				await BotInitSettings.ServersData[ctx.Guild.Id].GetAnnountmentsChannel(ctx.Guild)
+					.SendMessageAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetStreamSubscriberRole(ctx.Guild).Mention + " " +
+					ctx.Member.Mention + " стримт " + gameName + " [" + streamName + "] " + link).ThrowTaskException();
+
+				await ctx.Message.DeleteAsync();
+			}
+			else
+			{
+				await BotInitSettings.ServersData[ctx.Guild.Id].GetAnnountmentsChannel(ctx.Guild)
+					.SendMessageAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetStreamSubscriberRole(ctx.Guild).Mention + " " +
+					ctx.Member.Mention + " будует стримить " + gameName + " [" + streamName + "] через " + time.Value.ToString() + " мин.")
+					.ThrowTaskException();
+
+				await Task.Delay(time.Value * 60 * 1000);
+
+				await Announce(ctx, gameName, streamName, link);
+			}
 		}
 
 		[Hidden]
@@ -78,13 +129,16 @@ namespace CGZDiscordBot
 			}
 			else
 			{
+				//step auto
+				BotInitSettings.ServersData[ctx.Guild.Id].Administrator = ctx.Member.Id;
+
 				//step 1
 				await direct.SendMessageAsync("Enter \"/bot-init#select-channel\" in channel for voice channel creation");
 				var step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content == "/bot-init#select-channel").ThrowTaskException()).Result;
 
 				await step.Channel.SendMessageAsync("Channel selected");
 
-				BotInitSettings.ServersData[ctx.Guild.Id].VoiceChannelCreationChannel = step.Channel;
+				BotInitSettings.ServersData[ctx.Guild.Id].VoiceChannelCreationChannel = step.Channel.Id;
 
 				//step 2
 				await direct.SendMessageAsync("Enter \"/bot-init#select-caterogy\" in any channel in category for voice channel creation");
@@ -92,17 +146,35 @@ namespace CGZDiscordBot
 
 				await step.Channel.SendMessageAsync("Category selected");
 
-				BotInitSettings.ServersData[ctx.Guild.Id].VoiceChannelCategory = step.Channel.Parent;
+				BotInitSettings.ServersData[ctx.Guild.Id].VoiceChannelCategory = step.Channel.Parent.Id;
 
 				//step 3
-				await direct.SendMessageAsync("Enter \"/bot-init#select-role @ROLEMENTION\" in any channel in category for voice channel creation");
+				await direct.SendMessageAsync("Enter \"/bot-init#select-role @ROLEMENTION\" for default member role");
 				step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content.StartsWith("/bot-init#select-role <@&")).ThrowTaskException()).Result;
 
 				var role = ctx.Guild.GetRole(ulong.Parse(step.Content["/bot-init#select-role <@&".Length..^1]));
 
 				await step.Channel.SendMessageAsync("Role selected");
 
-				BotInitSettings.ServersData[ctx.Guild.Id].DefaultMemberRole = role;
+				BotInitSettings.ServersData[ctx.Guild.Id].DefaultMemberRole = role.Id;
+
+				//step 4
+				await direct.SendMessageAsync("Enter \"/bot-init#select-channel\" in channel for annountments");
+				step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content == "/bot-init#select-channel").ThrowTaskException()).Result;
+
+				await step.Channel.SendMessageAsync("Channel selected");
+
+				BotInitSettings.ServersData[ctx.Guild.Id].AnnountmentsChannel = step.Channel.Id;
+
+				//step 5
+				await direct.SendMessageAsync("Enter \"/bot-init#select-role @ROLEMENTION\" for stream sub role");
+				step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content.StartsWith("/bot-init#select-role <@&")).ThrowTaskException()).Result;
+
+				role = ctx.Guild.GetRole(ulong.Parse(step.Content["/bot-init#select-role <@&".Length..^1]));
+
+				await step.Channel.SendMessageAsync("Role selected");
+
+				BotInitSettings.ServersData[ctx.Guild.Id].StreamSubscriberRole = role.Id;
 
 
 				await direct.SendMessageAsync("Setup end");
