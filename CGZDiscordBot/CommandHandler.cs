@@ -33,9 +33,12 @@ namespace CGZDiscordBot
 			var channel = await ctx.Guild.CreateChannelAsync(name, ChannelType.Voice, overwrites: overwrites,
 				parent: BotInitSettings.ServersData[ctx.Guild.Id].GetVoiceChannelCategory(ctx.Guild)).ThrowTaskException();
 
-			await ctx.Channel.SendMessageAsync("Channel created").ThrowTaskException();
+			await ctx.Message.DeleteAsync();
+			var msg = await ctx.Channel.SendMessageAsync("Канал " + name + " создан!").ThrowTaskException();
 
 			await Task.Delay(10000);
+
+			await msg.DeleteAsync();
 
 			while(channel.Users.Any()) Thread.Sleep(1);
 
@@ -136,13 +139,19 @@ namespace CGZDiscordBot
 					ctx.Member.Mention + " стримт " + gameName + " [" + streamName + "] " + link).ThrowTaskException();
 
 				await ctx.Message.DeleteAsync();
+				//don't write anything after it
 			}
 			else
 			{
-				await BotInitSettings.ServersData[ctx.Guild.Id].GetAnnountmentsChannel(ctx.Guild)
+				var msg = await BotInitSettings.ServersData[ctx.Guild.Id].GetAnnountmentsChannel(ctx.Guild)
 					.SendMessageAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetStreamSubscriberRole(ctx.Guild).Mention + " " +
 					ctx.Member.Mention + " будует стримить " + gameName + " [" + streamName + "] через " + time.Value.ToString() + " мин.")
 					.ThrowTaskException();
+
+				var emoji = DiscordEmoji.FromName(ctx.Client, ":eyes:");
+				await msg.CreateReactionAsync(emoji).ThrowTaskException();
+
+				await ctx.Message.DeleteAsync();
 
 				await Task.Delay(time.Value * 60 * 1000);
 
