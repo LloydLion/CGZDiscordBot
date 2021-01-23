@@ -60,6 +60,8 @@ namespace CGZDiscordBot
 				&& msg.Channel != BotInitSettings.GetUncensorChannel(guild))
 			{
 
+				var content = msg.Content.ToLower();
+
 				if(msg.Content.Split(' ', '-', '_', '&', '(', ')').ContainsAnyElementOf(censorWords))
 				{
 					msg.DeleteAsync();
