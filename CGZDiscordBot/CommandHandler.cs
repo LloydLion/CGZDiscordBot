@@ -5,14 +5,18 @@ using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
+using DSharpPlus.VoiceNext;
 using StandardLibrary.Data;
 using StandardLibrary.Other;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using YoutubeExplode;
 
 namespace CGZDiscordBot
 {
@@ -69,6 +73,57 @@ namespace CGZDiscordBot
 
 				await UnmuteMember(ctx, member).ThrowTaskException();
 			}
+		}
+
+		[Command("music")]
+		public async Task PlayMusic(CommandContext ctx, string query)
+		{
+			await ctx.Message.DeleteAsync();
+
+			var youClient = new YoutubeClient();
+
+			var voice = ctx.Client.GetVoiceNext();
+
+			if(voice.GetConnection(ctx.Guild) != null)
+			{
+				var msg = await ctx.Channel.SendMessageAsync
+					(ctx.Member.Mention + " Бот занят! Он уже играет музыку. Подождите или присоединяйтесь.");
+
+				await Task.Delay(5000);
+
+				await msg.DeleteAsync();
+			}
+
+			var video = (await youClient.Search.GetVideosAsync(query).BufferAsync(1))[0];
+
+			var manifest = await youClient.Videos.Streams.GetManifestAsync(video.Id);
+			var audioInfo = manifest.GetAudioOnly().First();
+
+			var channel = await ctx.Guild.CreateChannelAsync("Музыка: " + video.Title, ChannelType.Voice,
+				BotInitSettings.GetVoiceChannelCategory(ctx.Guild));
+
+			var connection = await voice.ConnectAsync(channel);
+			var sink = connection.GetTransmitSink();
+
+			await youClient.Videos.Streams.DownloadAsync(audioInfo, "temp.music");
+
+			await connection.SendSpeakingAsync(true);
+
+			var ffmpeg = Process.Start(new ProcessStartInfo
+			{
+				FileName = "ffmpeglib\\ffmpeg.exe",
+				Arguments = $@"-i ""temp.music"" -ac 2 -f s16le -ar 48000 pipe:1 -loglevel quiet",
+				RedirectStandardOutput = true,
+				UseShellExecute = false
+			});
+
+			var ffout = ffmpeg.StandardOutput.BaseStream;
+
+			await ffout.CopyToAsync(sink);
+			await sink.FlushAsync();
+			await connection.WaitForPlaybackFinishAsync();
+
+			await channel.DeleteAsync();
 		}
 
 		[Command("unmute")]

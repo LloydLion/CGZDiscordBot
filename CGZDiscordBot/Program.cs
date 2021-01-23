@@ -4,6 +4,7 @@ using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
+using DSharpPlus.VoiceNext;
 using StandardLibrary.Data;
 using System;
 using System.Collections.Generic;
@@ -23,7 +24,7 @@ namespace CGZDiscordBot
 			DataSaver.SetApplicationName("CGZDiscordBot");
 			if (SettingsSaver.HasKey("init")) BotInitSettings.ServersData.AddRange(SettingsSaver.GetSavedObject<Dictionary<ulong, BotInitSettings>>("init"));
 
-			var client = new DiscordClient(new DiscordConfiguration { TokenType = TokenType.Bot, Token = @"NzgyMzQ0MDA1OTUzMzg4NTg0.X8K0og.xnmh5esDi21KrQRPiN1IQkYc2Wk" });
+			var client = new DiscordClient(new DiscordConfiguration { TokenType = TokenType.Bot, Token = @"NzgyMzQ0MDA1OTUzMzg4NTg0.X8K0og.2lSv6GOjgS74jZoBed8Yy9SOYbY" });
 
 			CommandsNextConfiguration commConfig = new CommandsNextConfiguration
 			{
@@ -38,11 +39,17 @@ namespace CGZDiscordBot
 
 			};
 
+			VoiceNextConfiguration voiceConfig = new VoiceNextConfiguration
+			{
+				 
+			};
+
 			client.MessageCreated += (sender, s) => { Task.Run(() => CensorChat(s.Message, s.Guild)); return Task.CompletedTask; };
 			client.MessageUpdated += (sender, s) => { Task.Run(() => CensorChat(s.Message, s.Guild)); return Task.CompletedTask; };
 
 			client.UseCommandsNext(commConfig);
 			client.UseInteractivity(interactConfig);
+			client.UseVoiceNext(voiceConfig);
 
 			client.GetCommandsNext().RegisterCommands<CommandHandler>();
 
