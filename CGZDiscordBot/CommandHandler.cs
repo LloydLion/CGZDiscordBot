@@ -84,46 +84,47 @@ namespace CGZDiscordBot
 
 			var voice = ctx.Client.GetVoiceNext();
 
-			if(voice.GetConnection(ctx.Guild) != null)
+			if (voice.GetConnection(ctx.Guild) != null)
 			{
-				var msg = await ctx.Channel.SendMessageAsync
-					(ctx.Member.Mention + " Бот занят! Он уже играет музыку. Подождите или присоединяйтесь.");
+				await ctx.Channel.SendMessageAsync(ctx.Member.Mention + " Бот занят! Он уже играет музыку. Подождите или присоединяйтесь.")
+					.ContinueWith(s => { Thread.Sleep(5000); s.Result.DeleteAsync().Wait(); });
+			}
+			else
+			{
+				var video = (await youClient.Search.GetVideosAsync(query).BufferAsync(1))[0];
 
-				await Task.Delay(5000);
+				var manifest = await youClient.Videos.Streams.GetManifestAsync(video.Id);
+				var audioInfo = manifest.GetAudioOnly().First();
+
+				var msg = await ctx.Channel.SendMessageAsync("Идёт скачивание подождите.....");
+
+				await youClient.Videos.Streams.DownloadAsync(audioInfo, "temp.music");
 
 				await msg.DeleteAsync();
+				await ctx.Channel.SendMessageAsync("Скачивание завершено").ContinueWith(s => { Thread.Sleep(2000); s.Result.DeleteAsync().Wait(); });
+
+				var connection = await voice.ConnectAsync(BotInitSettings.GetMusicChannel(ctx.Guild));
+				var sink = connection.GetTransmitSink();
+
+				await connection.SendSpeakingAsync(true);
+
+				var ffmpeg = Process.Start(new ProcessStartInfo
+				{
+					FileName = "ffmpeglib\\ffmpeg.exe",
+					Arguments = $@"-i ""temp.music"" -ac 2 -f s16le -ar 48000 pipe:1 -loglevel quiet",
+					RedirectStandardOutput = true,
+					UseShellExecute = false
+				});
+
+				var ffout = ffmpeg.StandardOutput.BaseStream;
+
+				await ffout.CopyToAsync(sink);
+
+				ffmpeg.Kill();
+
+				await sink.FlushAsync();
+				await connection.WaitForPlaybackFinishAsync();
 			}
-
-			var video = (await youClient.Search.GetVideosAsync(query).BufferAsync(1))[0];
-
-			var manifest = await youClient.Videos.Streams.GetManifestAsync(video.Id);
-			var audioInfo = manifest.GetAudioOnly().First();
-
-			var channel = await ctx.Guild.CreateChannelAsync("Музыка: " + video.Title, ChannelType.Voice,
-				BotInitSettings.GetVoiceChannelCategory(ctx.Guild));
-
-			var connection = await voice.ConnectAsync(channel);
-			var sink = connection.GetTransmitSink();
-
-			await youClient.Videos.Streams.DownloadAsync(audioInfo, "temp.music");
-
-			await connection.SendSpeakingAsync(true);
-
-			var ffmpeg = Process.Start(new ProcessStartInfo
-			{
-				FileName = "ffmpeglib\\ffmpeg.exe",
-				Arguments = $@"-i ""temp.music"" -ac 2 -f s16le -ar 48000 pipe:1 -loglevel quiet",
-				RedirectStandardOutput = true,
-				UseShellExecute = false
-			});
-
-			var ffout = ffmpeg.StandardOutput.BaseStream;
-
-			await ffout.CopyToAsync(sink);
-			await sink.FlushAsync();
-			await connection.WaitForPlaybackFinishAsync();
-
-			await channel.DeleteAsync();
 		}
 
 		[Command("unmute")]
@@ -400,6 +401,10 @@ namespace CGZDiscordBot
 
 				BotInitSettings.ServersData[ctx.Guild.Id].UncensorChannel = step.Channel.Id;
 
+				//step auto 2
+				BotInitSettings.ServersData[ctx.Guild.Id].MusicChannel =
+					(await ctx.Guild.CreateChannelAsync("музыкальный канал", ChannelType.Voice,
+					BotInitSettings.GetVoiceChannelCategory(ctx.Guild))).Id;
 
 				await direct.SendMessageAsync("Setup end");
 			}
