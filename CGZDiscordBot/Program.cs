@@ -62,7 +62,7 @@ namespace CGZDiscordBot
 
 				var content = msg.Content.ToLower();
 
-				if(msg.Content.Split(' ', '-', '_', '&', '(', ')').ContainsAnyElementOf(censorWords))
+				if(content.Split(' ', '-', '_', '&', '(', ')').ContainsAnyElementOf(censorWords))
 				{
 					msg.DeleteAsync();
 
