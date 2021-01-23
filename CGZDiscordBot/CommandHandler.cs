@@ -2,6 +2,8 @@
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
+using DSharpPlus.EventArgs;
+using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
 using StandardLibrary.Data;
 using StandardLibrary.Other;
@@ -31,7 +33,7 @@ namespace CGZDiscordBot
 
 			var overwrites = new DiscordOverwriteBuilder[] { new DiscordOverwriteBuilder() { Allowed = Permissions.All }.For(ctx.Member) };
 			var channel = await ctx.Guild.CreateChannelAsync(name, ChannelType.Voice, overwrites: overwrites,
-				parent: BotInitSettings.ServersData[ctx.Guild.Id].GetVoiceChannelCategory(ctx.Guild)).ThrowTaskException();
+				parent: BotInitSettings.GetVoiceChannelCategory(ctx.Guild)).ThrowTaskException();
 
 			await ctx.Message.DeleteAsync();
 			var msg = await ctx.Channel.SendMessageAsync("Канал " + name + " создан!").ThrowTaskException();
@@ -52,8 +54,8 @@ namespace CGZDiscordBot
 
 			time = time == "-1" ? null : time;
 
-			await member.RevokeRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetDefaultMemberRole(ctx.Guild)).ThrowTaskException();
-			await member.GrantRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetMutedMemberRole(ctx.Guild)).ThrowTaskException();
+			await member.RevokeRoleAsync(BotInitSettings.GetDefaultMemberRole(ctx.Guild)).ThrowTaskException();
+			await member.GrantRoleAsync(BotInitSettings.GetMutedMemberRole(ctx.Guild)).ThrowTaskException();
 
 			await ctx.Message.DeleteAsync();
 
@@ -74,8 +76,8 @@ namespace CGZDiscordBot
 		{
 			if(ctx.Member.PermissionsIn(ctx.Channel).HasPermission(Permissions.KickMembers) == false) return;
 
-			await member.GrantRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetDefaultMemberRole(ctx.Guild)).ThrowTaskException();
-			await member.RevokeRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetMutedMemberRole(ctx.Guild)).ThrowTaskException();
+			await member.GrantRoleAsync(BotInitSettings.GetDefaultMemberRole(ctx.Guild)).ThrowTaskException();
+			await member.RevokeRoleAsync(BotInitSettings.GetMutedMemberRole(ctx.Guild)).ThrowTaskException();
 
 			await ctx.Channel.SendMessageAsync(member.Mention + " теперь может говорить(и писать тоже)!");
 
@@ -99,7 +101,7 @@ namespace CGZDiscordBot
 		[Command("join")]
 		public async Task HelloNewMember(CommandContext ctx)
 		{
-			await ctx.Member.GrantRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetDefaultMemberRole(ctx.Guild)).ThrowTaskException();
+			await ctx.Member.GrantRoleAsync(BotInitSettings.GetDefaultMemberRole(ctx.Guild)).ThrowTaskException();
 			await ctx.Message.DeleteAsync().ThrowTaskException();
 			(await ctx.Channel.GetMessagesAsync().ThrowTaskException())
 				.Where(s => s.Author.Id != BotInitSettings.ServersData[ctx.Guild.Id].Administrator).InvokeForAll(s => s.DeleteAsync().Wait());
@@ -108,7 +110,7 @@ namespace CGZDiscordBot
 		[Command("subscribe-streams")]
 		public async Task SubscribeToStreams(CommandContext ctx)
 		{
-			await ctx.Member.GrantRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetStreamSubscriberRole(ctx.Guild));
+			await ctx.Member.GrantRoleAsync(BotInitSettings.GetStreamSubscriberRole(ctx.Guild));
 			var msg = await ctx.Channel.SendMessageAsync(ctx.Member.Mention + " подписался на стримы");
 			await ctx.Message.DeleteAsync();
 
@@ -120,7 +122,7 @@ namespace CGZDiscordBot
 		[Command("unsubscribe-streams")]
 		public async Task UnsubscribeFromStreams(CommandContext ctx)
 		{
-			await ctx.Member.RevokeRoleAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetStreamSubscriberRole(ctx.Guild));
+			await ctx.Member.RevokeRoleAsync(BotInitSettings.GetStreamSubscriberRole(ctx.Guild));
 			var msg = await ctx.Channel.SendMessageAsync(ctx.Member.Mention + " отподписался от стримов");
 			await ctx.Message.DeleteAsync();
 
@@ -134,8 +136,8 @@ namespace CGZDiscordBot
 		{
 			if(time == null)
 			{
-				await BotInitSettings.ServersData[ctx.Guild.Id].GetAnnountmentsChannel(ctx.Guild)
-					.SendMessageAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetStreamSubscriberRole(ctx.Guild).Mention + " " +
+				await BotInitSettings.GetAnnountmentsChannel(ctx.Guild)
+					.SendMessageAsync(BotInitSettings.GetStreamSubscriberRole(ctx.Guild).Mention + " " +
 					ctx.Member.Mention + " стримт " + gameName + " [" + streamName + "] " + link).ThrowTaskException();
 
 				await ctx.Message.DeleteAsync();
@@ -143,8 +145,8 @@ namespace CGZDiscordBot
 			}
 			else
 			{
-				var msg = await BotInitSettings.ServersData[ctx.Guild.Id].GetAnnountmentsChannel(ctx.Guild)
-					.SendMessageAsync(BotInitSettings.ServersData[ctx.Guild.Id].GetStreamSubscriberRole(ctx.Guild).Mention + " " +
+				var msg = await BotInitSettings.GetAnnountmentsChannel(ctx.Guild)
+					.SendMessageAsync(BotInitSettings.GetStreamSubscriberRole(ctx.Guild).Mention + " " +
 					ctx.Member.Mention + " будует стримить " + gameName + " [" + streamName + "] через " + time.Value.ToString() + " мин.")
 					.ThrowTaskException();
 
@@ -157,6 +159,92 @@ namespace CGZDiscordBot
 
 				await Announce(ctx, gameName, streamName, link);
 			}
+		}
+
+		[Command("team-game")]
+		public async Task CreateTeamGame(CommandContext ctx, string gameName, int targetMemberCount, string description)
+		{
+			var channel = BotInitSettings.GetTeamFindingChannel(ctx.Guild);
+
+			var msg = await channel.SendMessageAsync(ctx.Member.Mention + " ищет напарника(ов) для игры в " +
+				gameName + "\n" + "Доп. иформация: " + description +
+				(targetMemberCount == -1 ? "" : ("\n\n" + "Для игры нужно " + targetMemberCount + " человек(а)")));
+
+			await msg.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":ok_hand:"));
+
+			if (targetMemberCount == -1)
+				await msg.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":arrow_forward:"));
+
+			await ctx.Message.DeleteAsync();
+
+			var interact = ctx.Client.GetInteractivity();
+			var dm = await ctx.Member.CreateDmChannelAsync();
+			List<DiscordUser> userList;
+
+			if(targetMemberCount != -1)
+				while(true)
+				{
+					Func<MessageReactionAddEventArgs, bool> predecate = (s) => s.Message == msg && s.Emoji == DiscordEmoji.FromName(ctx.Client, ":ok_hand:");
+					await interact.WaitForReactionAsync(predecate);
+
+					var users = await msg.GetReactionsAsync(DiscordEmoji.FromName(ctx.Client, ":ok_hand:"));
+					if (users.Count - 1 >= targetMemberCount)
+					{
+						userList = users.Where((s, i) => 0 <= i && i <= targetMemberCount - 1).ToList(); //Bot reaction ignore
+
+						await dm.SendMessageAsync("Ваша игра готова к старту! Зайдите в канал и одобрите старт!");
+
+						await msg.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":arrow_forward:"));
+
+						var retry = true;
+						while(retry)
+							retry = (await interact.WaitForReactionAsync
+								(s => s.Message == msg && s.User == ctx.User && s.Emoji == DiscordEmoji.FromName(ctx.Client, ":arrow_forward:"))).TimedOut;
+
+						break;
+					}
+				}
+			else
+			{
+				Func<MessageReactionAddEventArgs, bool> predecate = (s) => s.Message == msg && s.Emoji == DiscordEmoji.FromName(ctx.Client, ":arrow_forward:");
+
+				var retry = true;
+				while(retry)
+				{
+					retry = (await interact.WaitForReactionAsync
+						(s => s.Message == msg && s.Emoji == DiscordEmoji.FromName(ctx.Client, ":arrow_forward:"), new TimeSpan(0, 10, 0))).TimedOut;
+
+					await dm.SendMessageAsync("Незабывайте про созданую игру. Возможно уже пора начинать!");
+				}
+
+				var users = await msg.GetReactionsAsync(DiscordEmoji.FromName(ctx.Client, ":ok_hand:"));
+				userList = users.Where((s, i) => 0 <= i && i <= targetMemberCount - 1).ToList(); //Bot reaction ignore
+
+			}
+
+			var msg2 = await
+				channel.SendMessageAsync("Игра в " + gameName + " запущена!" + "\n\n" + "Участники: " + string.Join(", ", userList.Select(s => s.Mention)));
+
+			var name = "Играем в " + gameName;
+
+			var overwrites = new DiscordOverwriteBuilder[] { new DiscordOverwriteBuilder() { Allowed = Permissions.All }.For(ctx.Member) };
+			var voiceChannel = await ctx.Guild.CreateChannelAsync(name, ChannelType.Voice, overwrites: overwrites,
+				parent: BotInitSettings.GetVoiceChannelCategory(ctx.Guild)).ThrowTaskException();
+
+			var deleteTask = Task.Run(() =>
+			{
+				Thread.Sleep(10000);
+
+				while(voiceChannel.Users.Any()) Thread.Sleep(1);
+					voiceChannel.DeleteAsync();
+			});
+
+			await Task.Delay(3000);
+			await msg.DeleteAsync();
+			await Task.Delay(120000);
+			await msg2.DeleteAsync();
+
+			await deleteTask;
 		}
 
 		[Hidden]
@@ -238,6 +326,15 @@ namespace CGZDiscordBot
 				await step.Channel.SendMessageAsync("Role selected");
 
 				BotInitSettings.ServersData[ctx.Guild.Id].MutedMemberRole = role.Id;
+
+
+				//step 6
+				await direct.SendMessageAsync("Enter \"/bot-init#select-channel\" in channel for team finding");
+				step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content == "/bot-init#select-channel").ThrowTaskException()).Result;
+
+				await step.Channel.SendMessageAsync("Channel selected");
+
+				BotInitSettings.ServersData[ctx.Guild.Id].TeamFindingChannel = step.Channel.Id;
 
 
 				await direct.SendMessageAsync("Setup end");

@@ -26,19 +26,23 @@ namespace CGZDiscordBot
 
 		public ulong MutedMemberRole { get; set; }
 
+		public ulong TeamFindingChannel { get; set; }
 
-		public DiscordChannel GetVoiceChannelCreationChannel(DiscordGuild guild) => guild.GetChannel(VoiceChannelCreationChannel);
 
-		public DiscordChannel GetVoiceChannelCategory(DiscordGuild guild) => guild.GetChannel(VoiceChannelCategory);
+		public static DiscordChannel GetVoiceChannelCreationChannel(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].VoiceChannelCreationChannel);
 
-		public DiscordRole GetDefaultMemberRole(DiscordGuild guild) => guild.GetRole(DefaultMemberRole);
+		public static DiscordChannel GetVoiceChannelCategory(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].VoiceChannelCategory);
 
-		public DiscordChannel GetAnnountmentsChannel(DiscordGuild guild) => guild.GetChannel(AnnountmentsChannel);
+		public static DiscordRole GetDefaultMemberRole(DiscordGuild guild) => guild.GetRole(ServersData[guild.Id].DefaultMemberRole);
 
-		public DiscordRole GetStreamSubscriberRole(DiscordGuild guild) => guild.GetRole(StreamSubscriberRole);
+		public static DiscordChannel GetAnnountmentsChannel(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].AnnountmentsChannel);
 
-		public DiscordMember GetAdministrator(DiscordGuild guild) => guild.GetMemberAsync(Administrator).Result;
+		public static DiscordRole GetStreamSubscriberRole(DiscordGuild guild) => guild.GetRole(ServersData[guild.Id].StreamSubscriberRole);
 
-		public DiscordRole GetMutedMemberRole(DiscordGuild guild) => guild.GetRole(MutedMemberRole);
+		public static DiscordMember GetAdministrator(DiscordGuild guild) => guild.GetMemberAsync(ServersData[guild.Id].Administrator).Result;
+
+		public static DiscordRole GetMutedMemberRole(DiscordGuild guild) => guild.GetRole(ServersData[guild.Id].MutedMemberRole);
+
+		public static DiscordChannel GetTeamFindingChannel(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].TeamFindingChannel);
 	}
 }
