@@ -24,7 +24,7 @@ namespace CGZDiscordBot
 			DataSaver.SetApplicationName("CGZDiscordBot");
 			if (SettingsSaver.HasKey("init")) BotInitSettings.ServersData.AddRange(SettingsSaver.GetSavedObject<Dictionary<ulong, BotInitSettings>>("init"));
 
-			var client = new DiscordClient(new DiscordConfiguration { TokenType = TokenType.Bot, Token = @"NzgyMzQ0MDA1OTUzMzg4NTg0.X8K0og.2lSv6GOjgS74jZoBed8Yy9SOYbY" });
+			var client = new DiscordClient(new DiscordConfiguration { TokenType = TokenType.Bot, Token = File.ReadAllText("token.ini") });
 
 			CommandsNextConfiguration commConfig = new CommandsNextConfiguration
 			{
