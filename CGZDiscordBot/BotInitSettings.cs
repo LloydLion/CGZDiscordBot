@@ -28,6 +28,8 @@ namespace CGZDiscordBot
 
 		public ulong TeamFindingChannel { get; set; }
 
+		public ulong UncensorChannel { get; set; }
+
 
 		public static DiscordChannel GetVoiceChannelCreationChannel(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].VoiceChannelCreationChannel);
 
@@ -44,5 +46,7 @@ namespace CGZDiscordBot
 		public static DiscordRole GetMutedMemberRole(DiscordGuild guild) => guild.GetRole(ServersData[guild.Id].MutedMemberRole);
 
 		public static DiscordChannel GetTeamFindingChannel(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].TeamFindingChannel);
+
+		public static DiscordChannel GetUncensorChannel(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].UncensorChannel);
 	}
 }

@@ -28,5 +28,16 @@ namespace CGZDiscordBot
 		{
 			toAdd.InvokeForAll(s => obj.Add(s.Key, s.Value));
 		}
+
+		public static bool ContainsAnyElementOf<T>(this IEnumerable<T> collection, IEnumerable<T> check)
+		{
+			foreach(var item in check)
+			{
+				if(collection.Contains(item))
+					return true;
+			}
+
+			return false;
+		}
 	}
 }

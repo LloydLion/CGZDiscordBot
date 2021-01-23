@@ -337,6 +337,15 @@ namespace CGZDiscordBot
 				BotInitSettings.ServersData[ctx.Guild.Id].TeamFindingChannel = step.Channel.Id;
 
 
+				//step 6
+				await direct.SendMessageAsync("Enter \"/bot-init#select-channel\" in uncensor channel");
+				step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content == "/bot-init#select-channel").ThrowTaskException()).Result;
+
+				await step.Channel.SendMessageAsync("Channel selected");
+
+				BotInitSettings.ServersData[ctx.Guild.Id].UncensorChannel = step.Channel.Id;
+
+
 				await direct.SendMessageAsync("Setup end");
 			}
 

@@ -17,4 +17,10 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="CensorWords.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

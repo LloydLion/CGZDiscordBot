@@ -7,6 +7,7 @@ using DSharpPlus.Interactivity.Extensions;
 using StandardLibrary.Data;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -37,6 +38,9 @@ namespace CGZDiscordBot
 
 			};
 
+			client.MessageCreated += (sender, s) => { Task.Run(() => CensorChat(s.Message, s.Guild)); return Task.CompletedTask; };
+			client.MessageUpdated += (sender, s) => { Task.Run(() => CensorChat(s.Message, s.Guild)); return Task.CompletedTask; };
+
 			client.UseCommandsNext(commConfig);
 			client.UseInteractivity(interactConfig);
 
@@ -45,6 +49,41 @@ namespace CGZDiscordBot
 			client.ConnectAsync().Wait();
 
 			Thread.Sleep(-1);
+		}
+
+
+		public static void CensorChat(DiscordMessage msg, DiscordGuild guild)
+		{
+			var censorWords = File.ReadAllText(".\\CensorWords.txt").Split("\r\n");
+
+			if(BotInitSettings.ServersData.ContainsKey(guild.Id)/*init check*/ 
+				&& msg.Channel != BotInitSettings.GetUncensorChannel(guild))
+			{
+
+				if(msg.Content.Split(' ', '-', '_', '&', '(', ')').ContainsAnyElementOf(censorWords))
+				{
+					msg.DeleteAsync();
+
+					var member = guild.GetMemberAsync(msg.Author.Id).Result;
+
+					msg.Channel
+						.SendMessageAsync(member.Mention + " ваше сообщение было удалено по причине ислользования нецензурной лексики.\r\n Вы были заглушены на 02:00:00");
+
+					member.RevokeRoleAsync(BotInitSettings.GetDefaultMemberRole(guild));
+					member.GrantRoleAsync(BotInitSettings.GetMutedMemberRole(guild));
+
+					Task.Run(async () =>
+					{
+						var span = new TimeSpan(2, 0, 0);
+						await Task.Delay((int)span.TotalMilliseconds);
+
+						await member.GrantRoleAsync(BotInitSettings.GetDefaultMemberRole(guild)).ThrowTaskException();
+						await member.RevokeRoleAsync(BotInitSettings.GetMutedMemberRole(guild)).ThrowTaskException();
+
+						await msg.Channel.SendMessageAsync(member.Mention + " теперь может говорить(и писать тоже)!");
+					});
+				}
+			}
 		}
 	}
 }
