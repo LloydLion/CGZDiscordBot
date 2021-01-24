@@ -84,7 +84,7 @@ namespace CGZDiscordBot
 
 			var voice = ctx.Client.GetVoiceNext();
 
-			if (voice.GetConnection(ctx.Guild) != null)
+			if(File.Exists("temp.music"))
 			{
 				await ctx.Channel.SendMessageAsync(ctx.Member.Mention + " Бот занят! Он уже играет музыку. Подождите или присоединяйтесь.")
 					.ContinueWith(s => { Thread.Sleep(5000); s.Result.DeleteAsync().Wait(); });
@@ -96,14 +96,14 @@ namespace CGZDiscordBot
 				var manifest = await youClient.Videos.Streams.GetManifestAsync(video.Id);
 				var audioInfo = manifest.GetAudioOnly().First();
 
-				var msg = await ctx.Channel.SendMessageAsync("Идёт скачивание подождите.....");
+				var msg = await ctx.Channel.SendMessageAsync("Идёт скачивание. Подождите.....");
 
 				await youClient.Videos.Streams.DownloadAsync(audioInfo, "temp.music");
 
 				await msg.DeleteAsync();
 				await ctx.Channel.SendMessageAsync("Скачивание завершено").ContinueWith(s => { Thread.Sleep(2000); s.Result.DeleteAsync().Wait(); });
 
-				var connection = await voice.ConnectAsync(BotInitSettings.GetMusicChannel(ctx.Guild));
+				var connection = voice.GetConnection(ctx.Guild);
 				var sink = connection.GetTransmitSink();
 
 				await connection.SendSpeakingAsync(true);
@@ -118,12 +118,25 @@ namespace CGZDiscordBot
 
 				var ffout = ffmpeg.StandardOutput.BaseStream;
 
+				//Stats
+				var statMsg = await BotInitSettings.GetVoiceChannelCreationChannel(ctx.Guild).SendMessageAsync("Сейчас играет: " + video.Title + "\r\n" +
+					"Канал: " + video.Author + "\r\n\r\n" +
+					"Длительность: " + video.Duration.ToString() + "\r\n" +
+					"Начало в: " + new TimeSpan(DateTime.Now.Ticks).ToString(@"hh\:mm\:ss") + "\r\n" +
+					"Конец в: " + (video.Duration + new TimeSpan(DateTime.Now.Ticks)).ToString(@"hh\:mm\:ss") +
+					"\r\n\r\n" + $"{video.Engagement.ViewCount}:eyes:  {video.Engagement.LikeCount}:thumbsup:  {video.Engagement.DislikeCount}:thumbsdown:" +
+					"\r\n\r\n" + "Url: " + video.Url);
+
 				await ffout.CopyToAsync(sink);
 
 				ffmpeg.Kill();
+				File.Delete("temp.music");
 
 				await sink.FlushAsync();
 				await connection.WaitForPlaybackFinishAsync();
+
+				await connection.SendSpeakingAsync(false);
+				await statMsg.DeleteAsync();
 			}
 		}
 
@@ -405,6 +418,8 @@ namespace CGZDiscordBot
 				BotInitSettings.ServersData[ctx.Guild.Id].MusicChannel =
 					(await ctx.Guild.CreateChannelAsync("музыкальный канал", ChannelType.Voice,
 					BotInitSettings.GetVoiceChannelCategory(ctx.Guild))).Id;
+
+				await ctx.Client.GetVoiceNext().ConnectAsync(BotInitSettings.GetMusicChannel(ctx.Guild));
 
 				await direct.SendMessageAsync("Setup end");
 			}

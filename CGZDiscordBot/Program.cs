@@ -6,9 +6,11 @@ using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
 using DSharpPlus.VoiceNext;
 using StandardLibrary.Data;
+using StandardLibrary.Other;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -46,6 +48,13 @@ namespace CGZDiscordBot
 
 			client.MessageCreated += (sender, s) => { Task.Run(() => CensorChat(s.Message, s.Guild)); return Task.CompletedTask; };
 			client.MessageUpdated += (sender, s) => { Task.Run(() => CensorChat(s.Message, s.Guild)); return Task.CompletedTask; };
+			client.GuildDownloadCompleted += (sender, s) =>
+			{
+				s.Guilds.Values.Where(s => BotInitSettings.ServersData.ContainsKey(s.Id))
+					.InvokeForAll(g => sender.GetVoiceNext().ConnectAsync(BotInitSettings.GetMusicChannel(g)));
+
+				return Task.CompletedTask;
+			};
 
 			client.UseCommandsNext(commConfig);
 			client.UseInteractivity(interactConfig);
