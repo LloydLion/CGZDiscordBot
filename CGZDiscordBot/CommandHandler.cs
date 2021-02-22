@@ -22,6 +22,10 @@ namespace CGZDiscordBot
 {
 	class CommandHandler : BaseCommandModule
 	{
+		private CancellationTokenSource musicCancelToken;
+		private DiscordMember musicClient;
+
+
 		[Command("hello")]
 		public async Task Hello(CommandContext ctx)
 		{
@@ -33,8 +37,6 @@ namespace CGZDiscordBot
 		[Command("create")]
 		public async Task CreateChanel(CommandContext ctx, string name)
 		{
-			if (ctx.Channel.Id != BotInitSettings.ServersData[ctx.Guild.Id].VoiceChannelCreationChannel) return;
-
 			var overwrites = new DiscordOverwriteBuilder[] { new DiscordOverwriteBuilder() { Allowed = Permissions.All }.For(ctx.Member) };
 			var channel = await ctx.Guild.CreateChannelAsync(name, ChannelType.Voice, overwrites: overwrites,
 				parent: BotInitSettings.GetVoiceChannelCategory(ctx.Guild)).ThrowTaskException();
@@ -54,7 +56,13 @@ namespace CGZDiscordBot
 		[Command("mute")]
 		public async Task MuteMember(CommandContext ctx, DiscordMember member, string reason, string time)
 		{
-			if(ctx.Member.PermissionsIn(ctx.Channel).HasPermission(Permissions.KickMembers) == false) return;
+			if(ctx.Member.PermissionsIn(ctx.Channel).HasPermission(Permissions.KickMembers) == false)
+			{
+				var msg = await ctx.Channel.SendMessageAsync("У вас недостаточно прав для этого");
+				await Task.Delay(3000);
+				await msg.DeleteAsync();
+				return;
+			}
 
 			time = time == "-1" ? null : time;
 
@@ -91,7 +99,9 @@ namespace CGZDiscordBot
 			}
 			else
 			{
-				var video = (await youClient.Search.GetVideosAsync(query).BufferAsync(1))[0];
+				musicClient = ctx.Member;
+
+				var video = youClient.Search.GetVideosAsync(query).BufferAsync(1).AsTask().Result[0];
 
 				var manifest = await youClient.Videos.Streams.GetManifestAsync(video.Id);
 				var audioInfo = manifest.GetAudioOnly().First();
@@ -119,7 +129,7 @@ namespace CGZDiscordBot
 				var ffout = ffmpeg.StandardOutput.BaseStream;
 
 				//Stats
-				var statMsg = await BotInitSettings.GetVoiceChannelCreationChannel(ctx.Guild).SendMessageAsync("Сейчас играет: " + video.Title + "\r\n" +
+				var statMsg = await BotInitSettings.GetMusicInfoChannel(ctx.Guild).SendMessageAsync("Сейчас играет: " + video.Title + "\r\n" +
 					"Канал: " + video.Author + "\r\n\r\n" +
 					"Длительность: " + video.Duration.ToString() + "\r\n" +
 					"Начало в: " + new TimeSpan(DateTime.Now.Ticks).ToString(@"hh\:mm\:ss") + "\r\n" +
@@ -127,23 +137,58 @@ namespace CGZDiscordBot
 					"\r\n\r\n" + $"{video.Engagement.ViewCount}:eyes:  {video.Engagement.LikeCount}:thumbsup:  {video.Engagement.DislikeCount}:thumbsdown:" +
 					"\r\n\r\n" + "Url: " + video.Url);
 
-				await ffout.CopyToAsync(sink);
+
+				musicCancelToken = new CancellationTokenSource();
+				await ffout.CopyToAsync(sink, cancellationToken: musicCancelToken.Token);
 
 				ffmpeg.Kill();
 				File.Delete("temp.music");
 
-				await sink.FlushAsync();
+				await sink.FlushAsync(musicCancelToken.Token);
 				await connection.WaitForPlaybackFinishAsync();
 
 				await connection.SendSpeakingAsync(false);
 				await statMsg.DeleteAsync();
+
+				musicCancelToken = null;
+				musicClient = null;
+			}
+		}
+
+		[Command("stop-play")]
+		public async Task StopPlayMusic(CommandContext ctx)
+		{
+			if(musicCancelToken == null)
+			{
+				var msg = await ctx.Channel.SendMessageAsync("Отменять нечего. Музыка не играет!");
+				await Task.Delay(3000);
+				await msg.DeleteAsync();
+			}
+			else if(!(ctx.Member.PermissionsIn(ctx.Channel).HasPermission(Permissions.ManageMessages) || ctx.Member == musicClient))
+			{
+				var msg = await ctx.Channel.SendMessageAsync("У вас недостаточно прав для этого");
+				await Task.Delay(3000);
+				await msg.DeleteAsync();
+			}
+			else
+			{
+				musicCancelToken.Cancel();
+				var msg = await ctx.Channel.SendMessageAsync("Воспроизведение остановлено");
+				await Task.Delay(3000);
+				await msg.DeleteAsync();
 			}
 		}
 
 		[Command("unmute")]
 		public async Task UnmuteMember(CommandContext ctx, DiscordMember member)
 		{
-			if(ctx.Member.PermissionsIn(ctx.Channel).HasPermission(Permissions.KickMembers) == false) return;
+			if(ctx.Member.PermissionsIn(ctx.Channel).HasPermission(Permissions.KickMembers) == false)
+			{
+				var msg = await ctx.Channel.SendMessageAsync("У вас недостаточно прав для этого");
+				await Task.Delay(3000);
+				await msg.DeleteAsync();
+				return;
+			}
 
 			await member.GrantRoleAsync(BotInitSettings.GetDefaultMemberRole(ctx.Guild)).ThrowTaskException();
 			await member.RevokeRoleAsync(BotInitSettings.GetMutedMemberRole(ctx.Guild)).ThrowTaskException();
@@ -348,7 +393,7 @@ namespace CGZDiscordBot
 
 				await step.Channel.SendMessageAsync("Channel selected");
 
-				BotInitSettings.ServersData[ctx.Guild.Id].VoiceChannelCreationChannel = step.Channel.Id;
+				BotInitSettings.ServersData[ctx.Guild.Id].MusicInfoChannel = step.Channel.Id;
 
 				//step 2
 				await direct.SendMessageAsync("Enter \"/bot-init#select-caterogy\" in any channel in category for voice channel creation");

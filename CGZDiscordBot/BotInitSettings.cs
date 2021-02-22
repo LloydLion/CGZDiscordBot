@@ -12,7 +12,7 @@ namespace CGZDiscordBot
 		public static Dictionary<ulong, BotInitSettings> ServersData { get; } = new Dictionary<ulong, BotInitSettings>();
 
 
-		public ulong VoiceChannelCreationChannel { get; set; }
+		public ulong MusicInfoChannel { get; set; }
 
 		public ulong VoiceChannelCategory { get; set; }
 
@@ -33,7 +33,7 @@ namespace CGZDiscordBot
 		public ulong MusicChannel { get; set; }
 
 
-		public static DiscordChannel GetVoiceChannelCreationChannel(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].VoiceChannelCreationChannel);
+		public static DiscordChannel GetMusicInfoChannel(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].MusicInfoChannel);
 
 		public static DiscordChannel GetVoiceChannelCategory(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].VoiceChannelCategory);
 
