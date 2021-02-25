@@ -56,6 +56,9 @@ namespace CGZDiscordBot
 				return Task.CompletedTask;
 			};
 
+			//Log System
+			var logger = new ActionLogger(client, "logs");
+
 			client.UseCommandsNext(commConfig);
 			client.UseInteractivity(interactConfig);
 			client.UseVoiceNext(voiceConfig);
