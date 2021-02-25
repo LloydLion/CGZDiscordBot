@@ -4,7 +4,7 @@ using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
-using DSharpPlus.VoiceNext;
+//using DSharpPlus.VoiceNext;
 using StandardLibrary.Data;
 using StandardLibrary.Other;
 using System;
@@ -18,13 +18,13 @@ namespace CGZDiscordBot
 {
 	class Program
 	{
-		public static DataSaver SettingsSaver { get; } = new DataSaver(DataSaver.DataLocation.ProgramDirectory);
+		public static SettingsSaver SettingsSaver { get; } = new SettingsSaver();
 
 
 		static void Main(string[] args)
 		{
-			DataSaver.SetApplicationName("CGZDiscordBot");
-			if (SettingsSaver.HasKey("init")) BotInitSettings.ServersData.AddRange(SettingsSaver.GetSavedObject<Dictionary<ulong, BotInitSettings>>("init"));
+			SettingsSaver.ConcatFromDefault();
+			BotInitSettings.ServersData.AddRange(SettingsSaver.SettingsDictinary);
 
 			var client = new DiscordClient(new DiscordConfiguration { TokenType = TokenType.Bot, Token = File.ReadAllText("token.ini") });
 
@@ -41,27 +41,27 @@ namespace CGZDiscordBot
 
 			};
 
-			VoiceNextConfiguration voiceConfig = new VoiceNextConfiguration
-			{
+			//VoiceNextConfiguration voiceConfig = new VoiceNextConfiguration
+			//{
 				 
-			};
+			//};
 
 			client.MessageCreated += (sender, s) => { Task.Run(() => CensorChat(s.Message, s.Guild)); return Task.CompletedTask; };
 			client.MessageUpdated += (sender, s) => { Task.Run(() => CensorChat(s.Message, s.Guild)); return Task.CompletedTask; };
-			client.GuildDownloadCompleted += (sender, s) =>
-			{
-				s.Guilds.Values.Where(s => BotInitSettings.ServersData.ContainsKey(s.Id))
-					.InvokeForAll(g => sender.GetVoiceNext().ConnectAsync(BotInitSettings.GetMusicChannel(g)));
+			//client.GuildDownloadCompleted += (sender, s) =>
+			//{
+			//	s.Guilds.Values.Where(s => BotInitSettings.ServersData.ContainsKey(s.Id))
+			//		.InvokeForAll(g => sender.GetVoiceNext().ConnectAsync(BotInitSettings.GetMusicChannel(g)));
 
-				return Task.CompletedTask;
-			};
+			//	return Task.CompletedTask;
+			//};
 
 			//Log System
 			var logger = new ActionLogger(client, "logs");
 
 			client.UseCommandsNext(commConfig);
 			client.UseInteractivity(interactConfig);
-			client.UseVoiceNext(voiceConfig);
+			//client.UseVoiceNext(voiceConfig);
 
 			client.GetCommandsNext().RegisterCommands<CommandHandler>();
 

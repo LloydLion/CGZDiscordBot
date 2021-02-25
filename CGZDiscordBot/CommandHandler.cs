@@ -5,7 +5,7 @@ using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
-using DSharpPlus.VoiceNext;
+//using DSharpPlus.VoiceNext;
 using StandardLibrary.Data;
 using StandardLibrary.Other;
 using System;
@@ -22,8 +22,8 @@ namespace CGZDiscordBot
 {
 	class CommandHandler : BaseCommandModule
 	{
-		private CancellationTokenSource musicCancelToken;
-		private DiscordMember musicClient;
+		//private CancellationTokenSource musicCancelToken;
+		//private DiscordMember musicClient;
 
 
 		[Command("hello")]
@@ -83,101 +83,101 @@ namespace CGZDiscordBot
 			}
 		}
 
-		[Command("music")]
-		public async Task PlayMusic(CommandContext ctx, string query)
-		{
-			await ctx.Message.DeleteAsync();
+		//[Command("music")]
+		//public async Task PlayMusic(CommandContext ctx, string query)
+		//{
+		//	await ctx.Message.DeleteAsync();
 
-			var youClient = new YoutubeClient();
+		//	var youClient = new YoutubeClient();
 
-			var voice = ctx.Client.GetVoiceNext();
+		//	var voice = ctx.Client.GetVoiceNext();
 
-			if(File.Exists("temp.music"))
-			{
-				await ctx.Channel.SendMessageAsync(ctx.Member.Mention + " Бот занят! Он уже играет музыку. Подождите или присоединяйтесь.")
-					.ContinueWith(s => { Thread.Sleep(5000); s.Result.DeleteAsync().Wait(); });
-			}
-			else
-			{
-				musicClient = ctx.Member;
+		//	if(File.Exists("temp.music"))
+		//	{
+		//		await ctx.Channel.SendMessageAsync(ctx.Member.Mention + " Бот занят! Он уже играет музыку. Подождите или присоединяйтесь.")
+		//			.ContinueWith(s => { Thread.Sleep(5000); s.Result.DeleteAsync().Wait(); });
+		//	}
+		//	else
+		//	{
+		//		musicClient = ctx.Member;
 
-				var video = youClient.Search.GetVideosAsync(query).BufferAsync(1).AsTask().Result[0];
+		//		var video = youClient.Search.GetVideosAsync(query).BufferAsync(1).AsTask().Result[0];
 
-				var manifest = await youClient.Videos.Streams.GetManifestAsync(video.Id);
-				var audioInfo = manifest.GetAudioOnly().First();
+		//		var manifest = await youClient.Videos.Streams.GetManifestAsync(video.Id);
+		//		var audioInfo = manifest.GetAudioOnly().First();
 
-				var msg = await ctx.Channel.SendMessageAsync("Идёт скачивание. Подождите.....");
+		//		var msg = await ctx.Channel.SendMessageAsync("Идёт скачивание. Подождите.....");
 
-				await youClient.Videos.Streams.DownloadAsync(audioInfo, "temp.music");
+		//		await youClient.Videos.Streams.DownloadAsync(audioInfo, "temp.music");
 
-				await msg.DeleteAsync();
-				await ctx.Channel.SendMessageAsync("Скачивание завершено").ContinueWith(s => { Thread.Sleep(2000); s.Result.DeleteAsync().Wait(); });
+		//		await msg.DeleteAsync();
+		//		await ctx.Channel.SendMessageAsync("Скачивание завершено").ContinueWith(s => { Thread.Sleep(2000); s.Result.DeleteAsync().Wait(); });
 
-				var connection = voice.GetConnection(ctx.Guild);
-				var sink = connection.GetTransmitSink();
+		//		var connection = voice.GetConnection(ctx.Guild);
+		//		var sink = connection.GetTransmitSink();
 
-				await connection.SendSpeakingAsync(true);
+		//		await connection.SendSpeakingAsync(true);
 
-				var ffmpeg = Process.Start(new ProcessStartInfo
-				{
-					FileName = "ffmpeglib\\ffmpeg.exe",
-					Arguments = $@"-i ""temp.music"" -ac 2 -f s16le -ar 48000 pipe:1 -loglevel quiet",
-					RedirectStandardOutput = true,
-					UseShellExecute = false
-				});
+		//		var ffmpeg = Process.Start(new ProcessStartInfo
+		//		{
+		//			FileName = "ffmpeglib\\ffmpeg.exe",
+		//			Arguments = $@"-i ""temp.music"" -ac 2 -f s16le -ar 48000 pipe:1 -loglevel quiet",
+		//			RedirectStandardOutput = true,
+		//			UseShellExecute = false
+		//		});
 
-				var ffout = ffmpeg.StandardOutput.BaseStream;
+		//		var ffout = ffmpeg.StandardOutput.BaseStream;
 
-				//Stats
-				var statMsg = await BotInitSettings.GetMusicInfoChannel(ctx.Guild).SendMessageAsync("Сейчас играет: " + video.Title + "\r\n" +
-					"Канал: " + video.Author + "\r\n\r\n" +
-					"Длительность: " + video.Duration.ToString() + "\r\n" +
-					"Начало в: " + new TimeSpan(DateTime.Now.Ticks).ToString(@"hh\:mm\:ss") + "\r\n" +
-					"Конец в: " + (video.Duration + new TimeSpan(DateTime.Now.Ticks)).ToString(@"hh\:mm\:ss") +
-					"\r\n\r\n" + $"{video.Engagement.ViewCount}:eyes:  {video.Engagement.LikeCount}:thumbsup:  {video.Engagement.DislikeCount}:thumbsdown:" +
-					"\r\n\r\n" + "Url: " + video.Url);
+		//		//Stats
+		//		var statMsg = await BotInitSettings.GetMusicInfoChannel(ctx.Guild).SendMessageAsync("Сейчас играет: " + video.Title + "\r\n" +
+		//			"Канал: " + video.Author + "\r\n\r\n" +
+		//			"Длительность: " + video.Duration.ToString() + "\r\n" +
+		//			"Начало в: " + new TimeSpan(DateTime.Now.Ticks).ToString(@"hh\:mm\:ss") + "\r\n" +
+		//			"Конец в: " + (video.Duration + new TimeSpan(DateTime.Now.Ticks)).ToString(@"hh\:mm\:ss") +
+		//			"\r\n\r\n" + $"{video.Engagement.ViewCount}:eyes:  {video.Engagement.LikeCount}:thumbsup:  {video.Engagement.DislikeCount}:thumbsdown:" +
+		//			"\r\n\r\n" + "Url: " + video.Url);
 
 
-				musicCancelToken = new CancellationTokenSource();
-				await ffout.CopyToAsync(sink, cancellationToken: musicCancelToken.Token);
+		//		musicCancelToken = new CancellationTokenSource();
+		//		await ffout.CopyToAsync(sink, cancellationToken: musicCancelToken.Token);
 
-				ffmpeg.Kill();
-				File.Delete("temp.music");
+		//		ffmpeg.Kill();
+		//		File.Delete("temp.music");
 
-				await sink.FlushAsync(musicCancelToken.Token);
-				await connection.WaitForPlaybackFinishAsync();
+		//		await sink.FlushAsync(musicCancelToken.Token);
+		//		await connection.WaitForPlaybackFinishAsync();
 
-				await connection.SendSpeakingAsync(false);
-				await statMsg.DeleteAsync();
+		//		await connection.SendSpeakingAsync(false);
+		//		await statMsg.DeleteAsync();
 
-				musicCancelToken = null;
-				musicClient = null;
-			}
-		}
+		//		musicCancelToken = null;
+		//		musicClient = null;
+		//	}
+		//}
 
-		[Command("stop-play")]
-		public async Task StopPlayMusic(CommandContext ctx)
-		{
-			if(musicCancelToken == null)
-			{
-				var msg = await ctx.Channel.SendMessageAsync("Отменять нечего. Музыка не играет!");
-				await Task.Delay(3000);
-				await msg.DeleteAsync();
-			}
-			else if(!(ctx.Member.PermissionsIn(ctx.Channel).HasPermission(Permissions.ManageMessages) || ctx.Member == musicClient))
-			{
-				var msg = await ctx.Channel.SendMessageAsync("У вас недостаточно прав для этого");
-				await Task.Delay(3000);
-				await msg.DeleteAsync();
-			}
-			else
-			{
-				musicCancelToken.Cancel();
-				var msg = await ctx.Channel.SendMessageAsync("Воспроизведение остановлено");
-				await Task.Delay(3000);
-				await msg.DeleteAsync();
-			}
-		}
+		//[Command("stop-play")]
+		//public async Task StopPlayMusic(CommandContext ctx)
+		//{
+		//	if(musicCancelToken == null)
+		//	{
+		//		var msg = await ctx.Channel.SendMessageAsync("Отменять нечего. Музыка не играет!");
+		//		await Task.Delay(3000);
+		//		await msg.DeleteAsync();
+		//	}
+		//	else if(!(ctx.Member.PermissionsIn(ctx.Channel).HasPermission(Permissions.ManageMessages) || ctx.Member == musicClient))
+		//	{
+		//		var msg = await ctx.Channel.SendMessageAsync("У вас недостаточно прав для этого");
+		//		await Task.Delay(3000);
+		//		await msg.DeleteAsync();
+		//	}
+		//	else
+		//	{
+		//		musicCancelToken.Cancel();
+		//		var msg = await ctx.Channel.SendMessageAsync("Воспроизведение остановлено");
+		//		await Task.Delay(3000);
+		//		await msg.DeleteAsync();
+		//	}
+		//}
 
 		[Command("unmute")]
 		public async Task UnmuteMember(CommandContext ctx, DiscordMember member)
@@ -459,17 +459,18 @@ namespace CGZDiscordBot
 
 				BotInitSettings.ServersData[ctx.Guild.Id].UncensorChannel = step.Channel.Id;
 
-				//step auto 2
-				BotInitSettings.ServersData[ctx.Guild.Id].MusicChannel =
-					(await ctx.Guild.CreateChannelAsync("музыкальный канал", ChannelType.Voice,
-					BotInitSettings.GetVoiceChannelCategory(ctx.Guild))).Id;
+				////step auto 2
+				//BotInitSettings.ServersData[ctx.Guild.Id].MusicChannel =
+				//	(await ctx.Guild.CreateChannelAsync("музыкальный канал", ChannelType.Voice,
+				//	BotInitSettings.GetVoiceChannelCategory(ctx.Guild))).Id;
 
-				await ctx.Client.GetVoiceNext().ConnectAsync(BotInitSettings.GetMusicChannel(ctx.Guild));
+				//await ctx.Client.GetVoiceNext().ConnectAsync(BotInitSettings.GetMusicChannel(ctx.Guild));
 
 				await direct.SendMessageAsync("Setup end");
 			}
 
-			Program.SettingsSaver.Save("init", BotInitSettings.ServersData);
+			Program.SettingsSaver.Save(ctx.Guild.Id, BotInitSettings.ServersData[ctx.Guild.Id]);
+			Program.SettingsSaver.FlushToDefault();
 		}
 	}
 }

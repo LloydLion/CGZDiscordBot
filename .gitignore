@@ -339,3 +339,4 @@ ASALocalRun/
 # BeatPulse healthcheck temp database
 healthchecksdb
 /CGZDiscordBot/token.ini
+/CGZDiscordBot/init.dat

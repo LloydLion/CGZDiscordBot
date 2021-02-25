@@ -3,6 +3,7 @@ using StandardLibrary.Data;
 using StandardLibrary.Other;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,7 +25,7 @@ namespace CGZDiscordBot
 			if(task.Exception != null) throw task.Exception;
 		}
 
-		public static void AddRange<TKey, TValue>(this Dictionary<TKey, TValue> obj, Dictionary<TKey, TValue> toAdd)
+		public static void AddRange<TKey, TValue>(this IDictionary<TKey, TValue> obj, IReadOnlyDictionary<TKey, TValue> toAdd)
 		{
 			toAdd.InvokeForAll(s => obj.Add(s.Key, s.Value));
 		}
@@ -38,6 +39,16 @@ namespace CGZDiscordBot
 			}
 
 			return false;
+		}
+
+		public static void FlushToDefault(this SettingsSaver saver)
+		{
+			saver.FlushTo(File.OpenRead("init.dat"));
+		}
+
+		public static void ConcatFromDefault(this SettingsSaver saver)
+		{
+			saver.ConcatFrom(File.ReadAllBytes("init.dat"));
 		}
 	}
 }
