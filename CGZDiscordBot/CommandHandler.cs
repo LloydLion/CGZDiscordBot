@@ -217,8 +217,6 @@ namespace CGZDiscordBot
 		{
 			await ctx.Member.GrantRoleAsync(BotInitSettings.GetDefaultMemberRole(ctx.Guild)).ThrowTaskException();
 			await ctx.Message.DeleteAsync().ThrowTaskException();
-			(await ctx.Channel.GetMessagesAsync().ThrowTaskException())
-				.Where(s => s.Author.Id != BotInitSettings.ServersData[ctx.Guild.Id].Administrator).InvokeForAll(s => s.DeleteAsync().Wait());
 		}
 
 		[Command("subscribe-streams")]
