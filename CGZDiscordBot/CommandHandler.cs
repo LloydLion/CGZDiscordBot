@@ -5,14 +5,15 @@ using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
-//using DSharpPlus.VoiceNext;
 using StandardLibrary.Data;
 using StandardLibrary.Other;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,10 +23,6 @@ namespace CGZDiscordBot
 {
 	class CommandHandler : BaseCommandModule
 	{
-		//private CancellationTokenSource musicCancelToken;
-		//private DiscordMember musicClient;
-
-
 		[Command("hello")]
 		public async Task Hello(CommandContext ctx)
 		{
@@ -82,102 +79,6 @@ namespace CGZDiscordBot
 				await UnmuteMember(ctx, member).ThrowTaskException();
 			}
 		}
-
-		//[Command("music")]
-		//public async Task PlayMusic(CommandContext ctx, string query)
-		//{
-		//	await ctx.Message.DeleteAsync();
-
-		//	var youClient = new YoutubeClient();
-
-		//	var voice = ctx.Client.GetVoiceNext();
-
-		//	if(File.Exists("temp.music"))
-		//	{
-		//		await ctx.Channel.SendMessageAsync(ctx.Member.Mention + " Бот занят! Он уже играет музыку. Подождите или присоединяйтесь.")
-		//			.ContinueWith(s => { Thread.Sleep(5000); s.Result.DeleteAsync().Wait(); });
-		//	}
-		//	else
-		//	{
-		//		musicClient = ctx.Member;
-
-		//		var video = youClient.Search.GetVideosAsync(query).BufferAsync(1).AsTask().Result[0];
-
-		//		var manifest = await youClient.Videos.Streams.GetManifestAsync(video.Id);
-		//		var audioInfo = manifest.GetAudioOnly().First();
-
-		//		var msg = await ctx.Channel.SendMessageAsync("Идёт скачивание. Подождите.....");
-
-		//		await youClient.Videos.Streams.DownloadAsync(audioInfo, "temp.music");
-
-		//		await msg.DeleteAsync();
-		//		await ctx.Channel.SendMessageAsync("Скачивание завершено").ContinueWith(s => { Thread.Sleep(2000); s.Result.DeleteAsync().Wait(); });
-
-		//		var connection = voice.GetConnection(ctx.Guild);
-		//		var sink = connection.GetTransmitSink();
-
-		//		await connection.SendSpeakingAsync(true);
-
-		//		var ffmpeg = Process.Start(new ProcessStartInfo
-		//		{
-		//			FileName = "ffmpeglib\\ffmpeg.exe",
-		//			Arguments = $@"-i ""temp.music"" -ac 2 -f s16le -ar 48000 pipe:1 -loglevel quiet",
-		//			RedirectStandardOutput = true,
-		//			UseShellExecute = false
-		//		});
-
-		//		var ffout = ffmpeg.StandardOutput.BaseStream;
-
-		//		//Stats
-		//		var statMsg = await BotInitSettings.GetMusicInfoChannel(ctx.Guild).SendMessageAsync("Сейчас играет: " + video.Title + "\r\n" +
-		//			"Канал: " + video.Author + "\r\n\r\n" +
-		//			"Длительность: " + video.Duration.ToString() + "\r\n" +
-		//			"Начало в: " + new TimeSpan(DateTime.Now.Ticks).ToString(@"hh\:mm\:ss") + "\r\n" +
-		//			"Конец в: " + (video.Duration + new TimeSpan(DateTime.Now.Ticks)).ToString(@"hh\:mm\:ss") +
-		//			"\r\n\r\n" + $"{video.Engagement.ViewCount}:eyes:  {video.Engagement.LikeCount}:thumbsup:  {video.Engagement.DislikeCount}:thumbsdown:" +
-		//			"\r\n\r\n" + "Url: " + video.Url);
-
-
-		//		musicCancelToken = new CancellationTokenSource();
-		//		await ffout.CopyToAsync(sink, cancellationToken: musicCancelToken.Token);
-
-		//		ffmpeg.Kill();
-		//		File.Delete("temp.music");
-
-		//		await sink.FlushAsync(musicCancelToken.Token);
-		//		await connection.WaitForPlaybackFinishAsync();
-
-		//		await connection.SendSpeakingAsync(false);
-		//		await statMsg.DeleteAsync();
-
-		//		musicCancelToken = null;
-		//		musicClient = null;
-		//	}
-		//}
-
-		//[Command("stop-play")]
-		//public async Task StopPlayMusic(CommandContext ctx)
-		//{
-		//	if(musicCancelToken == null)
-		//	{
-		//		var msg = await ctx.Channel.SendMessageAsync("Отменять нечего. Музыка не играет!");
-		//		await Task.Delay(3000);
-		//		await msg.DeleteAsync();
-		//	}
-		//	else if(!(ctx.Member.PermissionsIn(ctx.Channel).HasPermission(Permissions.ManageMessages) || ctx.Member == musicClient))
-		//	{
-		//		var msg = await ctx.Channel.SendMessageAsync("У вас недостаточно прав для этого");
-		//		await Task.Delay(3000);
-		//		await msg.DeleteAsync();
-		//	}
-		//	else
-		//	{
-		//		musicCancelToken.Cancel();
-		//		var msg = await ctx.Channel.SendMessageAsync("Воспроизведение остановлено");
-		//		await Task.Delay(3000);
-		//		await msg.DeleteAsync();
-		//	}
-		//}
 
 		[Command("unmute")]
 		public async Task UnmuteMember(CommandContext ctx, DiscordMember member)
@@ -359,6 +260,131 @@ namespace CGZDiscordBot
 			await deleteTask;
 		}
 
+		[Command("send-meme")]
+		public async Task SendMeme(CommandContext ctx, string message, string upTitle, string downTitle)
+		{
+			await ctx.Message.DeleteAsync();
+
+			var images = Program.MemeLoader.GetImages();
+
+			(Uri, Uri, Uri, Uri, Uri)[] imagesT = new (Uri, Uri, Uri, Uri, Uri)[(int)Math.Ceiling(images.Count / 5f)];
+
+			for(int i = 0; i < images.Count / 5; i++)
+			{
+				imagesT[i].Item1 = images[i * 5 + 0];
+				imagesT[i].Item2 = images[i * 5 + 1];
+				imagesT[i].Item3 = images[i * 5 + 2];
+				imagesT[i].Item4 = images[i * 5 + 3];
+				imagesT[i].Item5 = images[i * 5 + 4];
+			}
+
+			if(images.Count % 5 != 0)
+			{
+				if(images.Count % 5 >= 1)
+					imagesT[^1] = (images[(imagesT.Length - 1) * 5 + 0], null, null, null, null);
+				if(images.Count % 5 >= 2)
+					imagesT[^1] = (imagesT[^1].Item1, images[(imagesT.Length - 1) * 5 + 1], null, null, null);
+				if(images.Count % 5 >= 3)
+					imagesT[^1] = (imagesT[^1].Item1, imagesT[^1].Item2, images[(imagesT.Length - 1) * 5 + 2], null, null);
+				if(images.Count % 5 >= 4)
+					imagesT[^1] = (imagesT[^1].Item1, imagesT[^1].Item2, imagesT[^1].Item3, images[(imagesT.Length - 1) * 5 + 3], null);
+			}
+
+			DiscordEmbed[][] pages = imagesT.Select(s =>
+			{
+				var builder = new DiscordEmbedBuilder();
+				var ret = new List<DiscordEmbed>();
+
+				if(s.Item1 != null) ret.Add(builder.WithImageUrl(s.Item1).Build());
+				if(s.Item2 != null) ret.Add(builder.WithImageUrl(s.Item2).Build());
+				if(s.Item3 != null) ret.Add(builder.WithImageUrl(s.Item3).Build());
+				if(s.Item4 != null) ret.Add(builder.WithImageUrl(s.Item4).Build());
+				if(s.Item5 != null) ret.Add(builder.WithImageUrl(s.Item5).Build());
+
+				return ret.ToArray();
+			}).ToArray();
+
+			int currentPage = 0;
+			int imageIndex = 0;
+			bool end = false;
+			
+			while(!end)
+			{
+				var msgs = pages[currentPage].Select(s => ctx.Channel.SendMessageAsync(embed: s).Result).ToArray();
+				var targetMsg = msgs[^1];
+
+				await targetMsg.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":one:"));
+				await targetMsg.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":two:"));
+				await targetMsg.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":three:"));
+				await targetMsg.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":four:"));
+				await targetMsg.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":five:"));
+
+				await targetMsg.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":arrow_forward:"));
+				await targetMsg.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":arrow_backward:"));
+				await targetMsg.CreateReactionAsync(DiscordEmoji.FromName(ctx.Client, ":x:"));
+
+				var interct = ctx.Client.GetInteractivity();
+
+			InvalidEndji:
+				var iRes = await interct.WaitForReactionAsync(s => s.Message == targetMsg && s.User == ctx.User);
+
+				if (iRes.TimedOut) goto InvalidEndji;
+				
+				switch(iRes.Result.Emoji.Name)
+				{
+					case "▶️":
+						currentPage++;
+						break;
+					case "◀️":
+						currentPage--;
+						break;
+					case "1️⃣":
+						imageIndex = 0;
+						end = true;
+						break;
+					case "2️⃣":
+						imageIndex = 1;
+						end = true;
+						break;
+					case "3️⃣":
+						imageIndex = 2;
+						end = true;
+						break;
+					case "4️⃣":
+						imageIndex = 3;
+						end = true;
+						break;
+					case "5️⃣":
+						imageIndex = 4;
+						end = true;
+						break;
+					default:
+						goto InvalidEndji;
+				}
+
+				msgs.InvokeForAll(s => s.DeleteAsync().Wait());
+			}
+
+			var targetUrl = pages[currentPage][imageIndex].Image.Url;
+
+			var downloadClient = new WebClient();
+			var mem = new MemoryStream(downloadClient.DownloadData(targetUrl.ToUri().OriginalString));
+			var image = Image.FromStream(mem);
+
+			var graphics = Graphics.FromImage(image);
+
+			graphics.DrawString(upTitle, new Font("Tahoma", 60, FontStyle.Bold), Brushes.White, new PointF(image.Width / 2, 45),
+				new StringFormat() { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center });
+
+			graphics.DrawString(downTitle, new Font("Tahoma", 60, FontStyle.Bold), Brushes.White, new PointF(image.Width / 2, image.Height - 45),
+				new StringFormat() { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center });
+
+			graphics.Save();
+
+			image.Save("tmp" + Path.DirectorySeparatorChar + "dtmp.png", System.Drawing.Imaging.ImageFormat.Png);
+			await ctx.Channel.SendFileAsync("tmp" + Path.DirectorySeparatorChar + "dtmp.png", content: "[" + ctx.Member.Mention + "]: " + message);
+		}
+
 		[Hidden]
 		[Command("st-init-dialog")]
 		public async Task InitBot(CommandContext ctx)
@@ -386,22 +412,14 @@ namespace CGZDiscordBot
 				BotInitSettings.ServersData[ctx.Guild.Id].Administrator = ctx.Member.Id;
 
 				//step 1
-				await direct.SendMessageAsync("Enter \"/bot-init#select-channel\" in channel for voice channel creation");
-				var step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content == "/bot-init#select-channel").ThrowTaskException()).Result;
-
-				await step.Channel.SendMessageAsync("Channel selected");
-
-				BotInitSettings.ServersData[ctx.Guild.Id].MusicInfoChannel = step.Channel.Id;
-
-				//step 2
 				await direct.SendMessageAsync("Enter \"/bot-init#select-caterogy\" in any channel in category for voice channel creation");
-				step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content == "/bot-init#select-category").ThrowTaskException()).Result;
+				var step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content == "/bot-init#select-category").ThrowTaskException()).Result;
 
 				await step.Channel.SendMessageAsync("Category selected");
 
 				BotInitSettings.ServersData[ctx.Guild.Id].VoiceChannelCategory = step.Channel.Parent.Id;
 
-				//step 3
+				//step 2
 				await direct.SendMessageAsync("Enter \"/bot-init#select-role @ROLEMENTION\" for default member role");
 				step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content.StartsWith("/bot-init#select-role <@&")).ThrowTaskException()).Result;
 
@@ -411,7 +429,7 @@ namespace CGZDiscordBot
 
 				BotInitSettings.ServersData[ctx.Guild.Id].DefaultMemberRole = role.Id;
 
-				//step 4
+				//step 3
 				await direct.SendMessageAsync("Enter \"/bot-init#select-channel\" in channel for annountments");
 				step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content == "/bot-init#select-channel").ThrowTaskException()).Result;
 
@@ -419,7 +437,7 @@ namespace CGZDiscordBot
 
 				BotInitSettings.ServersData[ctx.Guild.Id].AnnountmentsChannel = step.Channel.Id;
 
-				//step 5
+				//step 4
 				await direct.SendMessageAsync("Enter \"/bot-init#select-role @ROLEMENTION\" for stream sub role");
 				step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content.StartsWith("/bot-init#select-role <@&")).ThrowTaskException()).Result;
 
@@ -449,20 +467,13 @@ namespace CGZDiscordBot
 				BotInitSettings.ServersData[ctx.Guild.Id].TeamFindingChannel = step.Channel.Id;
 
 
-				//step 6
+				//step 7
 				await direct.SendMessageAsync("Enter \"/bot-init#select-channel\" in uncensor channel");
 				step = (await interact.WaitForMessageAsync((s) => s.Author == ctx.Member && s.Content == "/bot-init#select-channel").ThrowTaskException()).Result;
 
 				await step.Channel.SendMessageAsync("Channel selected");
 
 				BotInitSettings.ServersData[ctx.Guild.Id].UncensorChannel = step.Channel.Id;
-
-				////step auto 2
-				//BotInitSettings.ServersData[ctx.Guild.Id].MusicChannel =
-				//	(await ctx.Guild.CreateChannelAsync("музыкальный канал", ChannelType.Voice,
-				//	BotInitSettings.GetVoiceChannelCategory(ctx.Guild))).Id;
-
-				//await ctx.Client.GetVoiceNext().ConnectAsync(BotInitSettings.GetMusicChannel(ctx.Guild));
 
 				await direct.SendMessageAsync("Setup end");
 			}

@@ -50,11 +50,15 @@ namespace CGZDiscordBot
 		#nullable enable
 		public void WriteToLog(ActionType action, DiscordGuild guild, DiscordChannel channel, DiscordMember? member, string data = "")
 		{
-			var file = File.Open(LogPath + "\\" + guild.Id + ".log", FileMode.Append, FileAccess.Write);
+			try
+			{
+				var file = File.Open(LogPath + "\\" + guild.Id + ".log", FileMode.Append, FileAccess.Write);
 
-			file.Write(Encoding.UTF8.GetBytes($"[{DateTime.Now}] {action} by @{member?.DisplayName}[{member?.Username}:{member?.Discriminator}-{member?.Id}] on #{channel.Name}[{channel.Id}], data[{data}]\r\n"));
-			file.Flush();
-			file.Close();
+				file.Write(Encoding.UTF8.GetBytes($"[{DateTime.Now}] {action} by @{member?.DisplayName}[{member?.Username}:{member?.Discriminator}-{member?.Id}] on #{channel.Name}[{channel.Id}], data[{data}]\r\n"));
+				file.Flush();
+				file.Close();
+			}
+			catch(Exception) { }
 		}
 	}
 }

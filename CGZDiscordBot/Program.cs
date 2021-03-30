@@ -9,6 +9,7 @@ using StandardLibrary.Data;
 using StandardLibrary.Other;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -20,6 +21,8 @@ namespace CGZDiscordBot
 	{
 		public static SettingsSaver SettingsSaver { get; } = new SettingsSaver();
 
+		public static MemeLoader MemeLoader { get; private set; }
+
 
 		static void Main(string[] args)
 		{
@@ -28,7 +31,11 @@ namespace CGZDiscordBot
 
 			var client = new DiscordClient(new DiscordConfiguration { TokenType = TokenType.Bot, Token = File.ReadAllText("token.ini") });
 
-			CommandsNextConfiguration commConfig = new CommandsNextConfiguration
+			//mems
+			MemeLoader = new MemeLoader(client);
+			Directory.GetFiles("meme_templates").InvokeForAll(s => MemeLoader.LoadImage(Image.FromFile(s)));
+
+			CommandsNextConfiguration commConfig = new()
 			{
 				StringPrefixes = new string[] { "/" },
 				EnableMentionPrefix = false,
@@ -36,32 +43,19 @@ namespace CGZDiscordBot
 				EnableDefaultHelp = true,
 			};
 
-			InteractivityConfiguration interactConfig = new InteractivityConfiguration
+			InteractivityConfiguration interactConfig = new()
 			{
 
 			};
 
-			//VoiceNextConfiguration voiceConfig = new VoiceNextConfiguration
-			//{
-				 
-			//};
-
-			client.MessageCreated += (sender, s) => { Task.Run(() => CensorChat(s.Message, s.Guild)); return Task.CompletedTask; };
-			client.MessageUpdated += (sender, s) => { Task.Run(() => CensorChat(s.Message, s.Guild)); return Task.CompletedTask; };
-			//client.GuildDownloadCompleted += (sender, s) =>
-			//{
-			//	s.Guilds.Values.Where(s => BotInitSettings.ServersData.ContainsKey(s.Id))
-			//		.InvokeForAll(g => sender.GetVoiceNext().ConnectAsync(BotInitSettings.GetMusicChannel(g)));
-
-			//	return Task.CompletedTask;
-			//};
+			client.MessageCreated += (sender, s) => { Task.Run(() => CensorChat(s.Message, s.Guild, client)); return Task.CompletedTask; };
+			client.MessageUpdated += (sender, s) => { Task.Run(() => CensorChat(s.Message, s.Guild, client)); return Task.CompletedTask; };
 
 			//Log System
 			var logger = new ActionLogger(client, "logs");
 
 			client.UseCommandsNext(commConfig);
 			client.UseInteractivity(interactConfig);
-			//client.UseVoiceNext(voiceConfig);
 
 			client.GetCommandsNext().RegisterCommands<CommandHandler>();
 
@@ -71,17 +65,18 @@ namespace CGZDiscordBot
 		}
 
 
-		public static void CensorChat(DiscordMessage msg, DiscordGuild guild)
+		public static void CensorChat(DiscordMessage msg, DiscordGuild guild, DiscordClient client)
 		{
 			var censorWords = File.ReadAllText(".\\CensorWords.txt").Split("\r\n");
 
 			if(BotInitSettings.ServersData.ContainsKey(guild.Id)/*init check*/ 
-				&& msg.Channel != BotInitSettings.GetUncensorChannel(guild))
+				&& msg.Channel != BotInitSettings.GetUncensorChannel(guild)
+				&& msg.Author != client.CurrentUser)
 			{
 
 				var content = msg.Content.ToLower();
 
-				if(content.Split(' ', '-', '_', '&', '(', ')').ContainsAnyElementOf(censorWords))
+				if(content.Split(' ', '-', '_', '&', '(', ')', '!').ContainsAnyElementOf(censorWords))
 				{
 					msg.DeleteAsync();
 

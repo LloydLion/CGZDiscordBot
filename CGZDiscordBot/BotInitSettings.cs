@@ -12,8 +12,6 @@ namespace CGZDiscordBot
 		public static Dictionary<ulong, BotInitSettings> ServersData { get; } = new Dictionary<ulong, BotInitSettings>();
 
 
-		public ulong MusicInfoChannel { get; set; }
-
 		public ulong VoiceChannelCategory { get; set; }
 
 		public ulong DefaultMemberRole { get; set; }
@@ -30,14 +28,14 @@ namespace CGZDiscordBot
 
 		public ulong UncensorChannel { get; set; }
 
-		public ulong MusicChannel { get; set; }
+		public ulong BotImagesChannel { get; set; }
 
-
-		public static DiscordChannel GetMusicInfoChannel(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].MusicInfoChannel);
 
 		public static DiscordChannel GetVoiceChannelCategory(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].VoiceChannelCategory);
 
 		public static DiscordRole GetDefaultMemberRole(DiscordGuild guild) => guild.GetRole(ServersData[guild.Id].DefaultMemberRole);
+
+		public static DiscordChannel GetBotImagesChannel(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].BotImagesChannel);
 
 		public static DiscordChannel GetAnnountmentsChannel(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].AnnountmentsChannel);
 
@@ -50,7 +48,5 @@ namespace CGZDiscordBot
 		public static DiscordChannel GetTeamFindingChannel(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].TeamFindingChannel);
 
 		public static DiscordChannel GetUncensorChannel(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].UncensorChannel);
-
-		public static DiscordChannel GetMusicChannel(DiscordGuild guild) => guild.GetChannel(ServersData[guild.Id].MusicChannel);
 	}
 }
